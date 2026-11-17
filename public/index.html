@@ -19,6 +19,8 @@
             <nav>
                 <a href="#" class="active" onclick="switchTab('dashboard')">Dashboard</a>
                 <a href="#" onclick="switchTab('inventory')">Inventory</a>
+                <a href="#" onclick="switchTab('suppliers')">Suppliers</a>
+                <a href="#" onclick="switchTab('vendors')">Vendors</a>
                 <a href="#" onclick="switchTab('sales')">Record Sale</a>
             </nav>
         </aside>
@@ -73,6 +75,75 @@
                             <tr><td colspan="4">Loading...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Suppliers Tab (NEW) -->
+            <div id="tab-suppliers" class="tab-content">
+                <header class="top-header">
+                    <h1>Suppliers</h1>
+                    <p>Manage your fruit suppliers</p>
+                </header>
+                <div class="glass form-container">
+                    <form id="supplier-form">
+                        <div class="form-group">
+                            <label>Business Name</label>
+                            <input type="text" id="sup_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Person</label>
+                            <input type="text" id="sup_contact" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="text" id="sup_phone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Province</label>
+                            <select id="sup_province" required>
+                                <option value="Gauteng">Gauteng</option>
+                                <option value="Free State">Free State</option>
+                                <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                                <option value="Western Cape">Western Cape</option>
+                                <option value="Eastern Cape">Eastern Cape</option>
+                                <option value="Limpopo">Limpopo</option>
+                                <option value="Mpumalanga">Mpumalanga</option>
+                                <option value="North West">North West</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Address</label>
+                            <input type="text" id="sup_address" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Add Supplier</button>
+                    </form>
+                    <div id="sup-message"></div>
+                </div>
+            </div>
+
+            <!-- Vendors Tab (NEW) -->
+            <div id="tab-vendors" class="tab-content">
+                <header class="top-header">
+                    <h1>Vendors</h1>
+                    <p>Manage street vendors and retailers</p>
+                </header>
+                <div class="glass form-container">
+                    <form id="vendor-form">
+                        <div class="form-group">
+                            <label>Vendor Name</label>
+                            <input type="text" id="ven_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="text" id="ven_phone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" id="ven_location" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Add Vendor</button>
+                    </form>
+                    <div id="ven-message"></div>
                 </div>
             </div>
 

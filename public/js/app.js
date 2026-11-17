@@ -17,15 +17,10 @@ async function loadDashboard() {
         const supRes = await fetch(`${API_URL}/suppliers`);
         const suppliers = await supRes.json();
         
-        // Log this to the browser console to see what it actually is
-        console.log("Suppliers Data:", suppliers); 
-
-        // Bulletproof way to get the length
         let supplierCount = 0;
         if (Array.isArray(suppliers)) {
             supplierCount = suppliers.length;
         } else if (suppliers && typeof suppliers === 'object') {
-            // Sometimes APIs return { data: [...] }
             supplierCount = suppliers.data ? suppliers.data.length : 0;
         }
         document.getElementById('stat-suppliers').innerText = supplierCount;
@@ -77,11 +72,9 @@ function renderStock(stock) {
     stock.forEach(item => {
         totalStock += item.available_quantity;
         
-        // Chart data accumulation
         if (!chartData[item.fruit_name]) chartData[item.fruit_name] = 0;
         chartData[item.fruit_name] += item.available_quantity;
 
-        // Table rows
         const isLow = item.available_quantity < 10;
         const badge = isLow 
             ? '<span class="badge badge-danger">Low Stock</span>' 
@@ -99,7 +92,7 @@ function renderStock(stock) {
 
     document.getElementById('stat-stock').innerText = totalStock;
 
-    // Render Chart.js with Animations & Tooltips
+    // Render Chart.js
     const ctx = document.getElementById('stockChart').getContext('2d');
     if (chartInstance) chartInstance.destroy(); 
     
@@ -120,10 +113,7 @@ function renderStock(stock) {
         },
         options: {
             responsive: true,
-            animation: {
-                duration: 1500, 
-                easing: 'easeOutQuart'
-            },
+            animation: { duration: 1500, easing: 'easeOutQuart' },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -142,15 +132,8 @@ function renderStock(stock) {
                 }
             },
             scales: {
-                y: { 
-                    beginAtZero: true, 
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: '#94a3b8' }
-                },
-                x: { 
-                    grid: { display: false },
-                    ticks: { color: '#94a3b8' }
-                }
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
             }
         }
     });
@@ -184,14 +167,78 @@ document.getElementById('sale-form').addEventListener('submit', async (e) => {
         const data = await response.json();
 
         if (response.ok) {
-            msgBox.innerHTML = `<span style="color:var(--success);"> Sale Recorded! Total: R${data.total_amount}</span>`;
+            msgBox.innerHTML = `<span style="color:var(--success);">✅ Sale Recorded! Total: R${data.total_amount}</span>`;
             document.getElementById('sale-form').reset();
-            loadDashboard(); // Refresh data to show updated stock
+            loadDashboard();
         } else {
-            msgBox.innerHTML = `<span style="color:var(--danger);"> ${data.error}</span>`;
+            msgBox.innerHTML = `<span style="color:var(--danger);">❌ ${data.error}</span>`;
         }
     } catch (error) {
-        msgBox.innerHTML = `<span style="color:var(--danger);">Server Error.</span>`;
+        msgBox.innerHTML = `<span style="color:var(--danger);">❌ Server Error.</span>`;
+    }
+});
+
+// Handle Supplier Form Submission (NEW)
+document.getElementById('supplier-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msgBox = document.getElementById('sup-message');
+    msgBox.innerHTML = '<span style="color:yellow;">Processing...</span>';
+
+    const payload = {
+        business_name: document.getElementById('sup_name').value,
+        contact_person: document.getElementById('sup_contact').value,
+        phone: document.getElementById('sup_phone').value,
+        province: document.getElementById('sup_province').value,
+        address: document.getElementById('sup_address').value
+    };
+
+    try {
+        const response = await fetch(`${API_URL}/suppliers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+            msgBox.innerHTML = `<span style="color:var(--success);">✅ Supplier Added Successfully!</span>`;
+            document.getElementById('supplier-form').reset();
+            loadDashboard();
+        } else {
+            msgBox.innerHTML = `<span style="color:var(--danger);">❌ Failed to add supplier.</span>`;
+        }
+    } catch (error) {
+        msgBox.innerHTML = `<span style="color:var(--danger);">❌ Server Error.</span>`;
+    }
+});
+
+// Handle Vendor Form Submission (NEW)
+document.getElementById('vendor-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msgBox = document.getElementById('ven-message');
+    msgBox.innerHTML = '<span style="color:yellow;">Processing...</span>';
+
+    const payload = {
+        vendor_name: document.getElementById('ven_name').value,
+        phone_number: document.getElementById('ven_phone').value,
+        location: document.getElementById('ven_location').value
+    };
+
+    try {
+        const response = await fetch(`${API_URL}/vendors`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+            msgBox.innerHTML = `<span style="color:var(--success);">✅ Vendor Added Successfully!</span>`;
+            document.getElementById('vendor-form').reset();
+            loadDashboard();
+        } else {
+            msgBox.innerHTML = `<span style="color:var(--danger);">❌ Failed to add vendor.</span>`;
+        }
+    } catch (error) {
+        msgBox.innerHTML = `<span style="color:var(--danger);">❌ Server Error.</span>`;
     }
 });
 
