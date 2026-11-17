@@ -5,7 +5,7 @@ exports.createSupplier = async (req, res) => {
     const { business_name, contact_person, phone, province, address } = req.body;
     try {
         const [result] = await pool.query(
-            'INSERT INTO Suppliers (business_name, contact_person, phone, province, address) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO suppliers (business_name, contact_person, phone, province, address) VALUES (?, ?, ?, ?, ?)',
             [business_name, contact_person, phone, province, address]
         );
         res.status(201).json({ message: 'Supplier created successfully', supplier_id: result.insertId });
@@ -17,7 +17,7 @@ exports.createSupplier = async (req, res) => {
 // 2. Get all suppliers
 exports.getAllSuppliers = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM Suppliers');
+        const [rows] = await pool.query('SELECT * FROM suppliers');
         res.status(200).json(rows);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -28,7 +28,7 @@ exports.getAllSuppliers = async (req, res) => {
 exports.getSupplierById = async (req, res) => {
     const { id } = req.params;
     try {
-        const [rows] = await pool.query('SELECT * FROM Suppliers WHERE supplier_id = ?', [id]);
+        const [rows] = await pool.query('SELECT * FROM suppliers WHERE supplier_id = ?', [id]);
         if (rows.length === 0) return res.status(404).json({ error: 'Supplier not found' });
         res.status(200).json(rows[0]);
     } catch (error) {
@@ -42,7 +42,7 @@ exports.updateSupplier = async (req, res) => {
     const { business_name, contact_person, phone, province, address } = req.body;
     try {
         const [result] = await pool.query(
-            'UPDATE Suppliers SET business_name = ?, contact_person = ?, phone = ?, province = ?, address = ? WHERE supplier_id = ?',
+            'UPDATE suppliers SET business_name = ?, contact_person = ?, phone = ?, province = ?, address = ? WHERE supplier_id = ?',
             [business_name, contact_person, phone, province, address, id]
         );
         if (result.affectedRows === 0) return res.status(404).json({ error: 'Supplier not found' });
@@ -56,7 +56,7 @@ exports.updateSupplier = async (req, res) => {
 exports.deleteSupplier = async (req, res) => {
     const { id } = req.params;
     try {
-        const [result] = await pool.query('DELETE FROM Suppliers WHERE supplier_id = ?', [id]);
+        const [result] = await pool.query('DELETE FROM suppliers WHERE supplier_id = ?', [id]);
         if (result.affectedRows === 0) return res.status(404).json({ error: 'Supplier not found' });
         res.status(200).json({ message: 'Supplier deleted successfully' });
     } catch (error) {

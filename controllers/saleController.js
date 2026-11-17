@@ -22,9 +22,9 @@ exports.createSale = async (req, res) => {
         for (let item of items) {
             const { fruit_id, quantity, unit_price, packaging_size } = item;
 
-            // Query the stock
+            // Query the stock (Lowercase 'stock')
             const [stockRows] = await connection.query(
-                'SELECT available_quantity FROM Stock WHERE fruit_id = ? AND packaging_size = ? FOR UPDATE',
+                'SELECT available_quantity FROM stock WHERE fruit_id = ? AND packaging_size = ? FOR UPDATE',
                 [fruit_id, packaging_size]
             );
 
@@ -53,25 +53,25 @@ exports.createSale = async (req, res) => {
             payment_status = 'PARTIALLY_PAID';
         }
 
-        // 4. Insert the Sale record
+        // 4. Insert the Sale record (Lowercase 'sales')
         const [saleResult] = await connection.query(
-            'INSERT INTO Sales (vendor_id, payment_status, payment_method, amount_paid, total_amount) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO sales (vendor_id, payment_status, payment_method, amount_paid, total_amount) VALUES (?, ?, ?, ?, ?)',
             [vendor_id, payment_status, payment_method, amount_paid || 0, total_amount]
         );
         const saleId = saleResult.insertId;
 
-        // 5. Insert SalesDetails and REDUCE STOCK
+        // 5. Insert SalesDetails and REDUCE STOCK (Lowercase 'salesdetails' and 'stock')
         for (let item of calculated_items) {
             const { fruit_id, quantity, unit_price, packaging_size } = item;
 
             await connection.query(
-                'INSERT INTO SalesDetails (sale_id, fruit_id, packaging_size, quantity, unit_price) VALUES (?, ?, ?, ?, ?)',
+                'INSERT INTO salesdetails (sale_id, fruit_id, packaging_size, quantity, unit_price) VALUES (?, ?, ?, ?, ?)',
                 [saleId, fruit_id, packaging_size, quantity, unit_price]
             );
 
             // Decrease stock
             await connection.query(
-                'UPDATE Stock SET available_quantity = available_quantity - ? WHERE fruit_id = ? AND packaging_size = ?',
+                'UPDATE stock SET available_quantity = available_quantity - ? WHERE fruit_id = ? AND packaging_size = ?',
                 [quantity, fruit_id, packaging_size]
             );
         }
@@ -102,8 +102,8 @@ exports.getOutstandingBalances = async (req, res) => {
                    SUM(s.total_amount) AS total_sales,
                    SUM(s.amount_paid) AS total_paid,
                    SUM(s.total_amount - s.amount_paid) AS outstanding_balance
-            FROM Vendors v
-            JOIN Sales s ON v.vendor_id = s.vendor_id
+            FROM vendors v
+            JOIN sales s ON v.vendor_id = s.vendor_id
             GROUP BY v.vendor_id
             HAVING outstanding_balance > 0
         `);
