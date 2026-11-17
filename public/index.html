@@ -3,172 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Batloung Farm | Modern Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Batloung Farm | Pro Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="dashboard">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar glass-panel">
             <div class="logo">
                 <h2>🍎 Batloung</h2>
-                <p>Farm Management</p>
+                <p>Enterprise Suite</p>
             </div>
             <nav>
-                <a href="#" class="active" onclick="switchTab('dashboard')">Dashboard</a>
-                <a href="#" onclick="switchTab('inventory')">Inventory</a>
+                <a href="#" class="active" onclick="switchTab('dashboard')">Overview</a>
                 <a href="#" onclick="switchTab('suppliers')">Suppliers</a>
+                <a href="#" onclick="switchTab('inventory')">Inventory</a>
                 <a href="#" onclick="switchTab('vendors')">Vendors</a>
                 <a href="#" onclick="switchTab('sales')">Record Sale</a>
             </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Dashboard Tab -->
+            <!-- Dashboard Overview -->
             <div id="tab-dashboard" class="tab-content active">
-                <header class="top-header">
-                    <h1>Overview</h1>
-                    <p>Welcome back, Administrator</p>
+                <header class="top-header flex-header">
+                    <div>
+                        <h1>Command Center</h1>
+                        <p>Live overview of your distribution network</p>
+                    </div>
+                    <div class="date-badge" id="current-date"></div>
                 </header>
 
                 <div class="stats-grid">
-                    <div class="stat-card glass">
-                        <h3>Suppliers</h3>
-                        <p id="stat-suppliers">0</p>
+                    <div class="stat-card glass-card">
+                        <div class="icon">🏢</div>
+                        <div>
+                            <h3>Total Suppliers</h3>
+                            <p id="stat-suppliers">0</p>
+                        </div>
                     </div>
-                    <div class="stat-card glass">
-                        <h3>Active Vendors</h3>
-                        <p id="stat-vendors">0</p>
+                    <div class="stat-card glass-card">
+                        <div class="icon">🤝</div>
+                        <div>
+                            <h3>Active Vendors</h3>
+                            <p id="stat-vendors">0</p>
+                        </div>
                     </div>
-                    <div class="stat-card glass">
-                        <h3>Total Boxes in Stock</h3>
-                        <p id="stat-stock">0</p>
+                    <div class="stat-card glass-card">
+                        <div class="icon">📦</div>
+                        <div>
+                            <h3>Total Boxes</h3>
+                            <p id="stat-stock">0</p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="chart-container glass">
-                    <h3>Stock by Fruit</h3>
+                <div class="chart-container glass-card">
+                    <h3>Stock Distribution by Fruit</h3>
                     <canvas id="stockChart"></canvas>
                 </div>
             </div>
 
-            <!-- Inventory Tab -->
-            <div id="tab-inventory" class="tab-content">
-                <header class="top-header">
-                    <h1>Inventory & Stock</h1>
-                    <p>Live stock levels across all packaging sizes</p>
+            <!-- Suppliers Management -->
+            <div id="tab-suppliers" class="tab-content">
+                <header class="top-header flex-header">
+                    <div>
+                        <h1>Supplier Management</h1>
+                        <p>Manage your fruit suppliers and contacts</p>
+                    </div>
+                    <button class="btn-primary" onclick="openModal('supplier')">+ Add Supplier</button>
                 </header>
-                <div class="glass table-container">
-                    <table id="stock-table">
+                <div class="glass-card table-container">
+                    <table>
                         <thead>
                             <tr>
-                                <th>Fruit</th>
-                                <th>Packaging Size</th>
-                                <th>Available Quantity</th>
-                                <th>Status</th>
+                                <th>Business Name</th>
+                                <th>Contact</th>
+                                <th>Phone</th>
+                                <th>Province</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="stock-body">
-                            <tr><td colspan="4">Loading...</td></tr>
-                        </tbody>
+                        <tbody id="suppliers-table-body"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Suppliers Tab (NEW) -->
-            <div id="tab-suppliers" class="tab-content">
-                <header class="top-header">
-                    <h1>Suppliers</h1>
-                    <p>Manage your fruit suppliers</p>
+            <!-- Inventory Management -->
+            <div id="tab-inventory" class="tab-content">
+                <header class="top-header flex-header">
+                    <div>
+                        <h1>Inventory & Stock</h1>
+                        <p>Live stock levels across all packaging sizes</p>
+                    </div>
                 </header>
-                <div class="glass form-container">
-                    <form id="supplier-form">
-                        <div class="form-group">
-                            <label>Business Name</label>
-                            <input type="text" id="sup_name" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Contact Person</label>
-                            <input type="text" id="sup_contact" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Phone</label>
-                            <input type="text" id="sup_phone" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Province</label>
-                            <select id="sup_province" required>
-                                <option value="Gauteng">Gauteng</option>
-                                <option value="Free State">Free State</option>
-                                <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                                <option value="Western Cape">Western Cape</option>
-                                <option value="Eastern Cape">Eastern Cape</option>
-                                <option value="Limpopo">Limpopo</option>
-                                <option value="Mpumalanga">Mpumalanga</option>
-                                <option value="North West">North West</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Address</label>
-                            <input type="text" id="sup_address" required>
-                        </div>
-                        <button type="submit" class="btn-primary">Add Supplier</button>
-                    </form>
-                    <div id="sup-message"></div>
+                <div class="glass-card table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fruit</th>
+                                <th>Small</th>
+                                <th>Medium</th>
+                                <th>Large</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-table-body"></tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Vendors Tab (NEW) -->
+            <!-- Vendors Management -->
             <div id="tab-vendors" class="tab-content">
-                <header class="top-header">
-                    <h1>Vendors</h1>
-                    <p>Manage street vendors and retailers</p>
+                <header class="top-header flex-header">
+                    <div>
+                        <h1>Vendor Network</h1>
+                        <p>Manage street vendors and retailers</p>
+                    </div>
+                    <button class="btn-primary" onclick="openModal('vendor')">+ Add Vendor</button>
                 </header>
-                <div class="glass form-container">
-                    <form id="vendor-form">
-                        <div class="form-group">
-                            <label>Vendor Name</label>
-                            <input type="text" id="ven_name" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Phone Number</label>
-                            <input type="text" id="ven_phone" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Location</label>
-                            <input type="text" id="ven_location" required>
-                        </div>
-                        <button type="submit" class="btn-primary">Add Vendor</button>
-                    </form>
-                    <div id="ven-message"></div>
+                <div class="glass-card table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Vendor Name</th>
+                                <th>Phone</th>
+                                <th>Location</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vendors-table-body"></tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Record Sale Tab -->
+            <!-- Record Sale -->
             <div id="tab-sales" class="tab-content">
                 <header class="top-header">
-                    <h1>Record a Sale</h1>
-                    <p>Deduct stock and log vendor transactions</p>
+                    <h1>Point of Sale</h1>
+                    <p>Process transactions and update inventory automatically</p>
                 </header>
-                <div class="glass form-container">
+                <div class="glass-card form-container">
                     <form id="sale-form">
                         <div class="form-group">
-                            <label for="vendor_id">Vendor</label>
-                            <select id="vendor_id" required>
-                                <option value="">Select Vendor...</option>
-                            </select>
+                            <label>Vendor</label>
+                            <select id="vendor_id" required></select>
                         </div>
                         <div class="form-group">
-                            <label for="fruit_id">Fruit</label>
-                            <select id="fruit_id" required>
-                                <option value="">Select Fruit...</option>
-                            </select>
+                            <label>Fruit</label>
+                            <select id="fruit_id" required></select>
                         </div>
                         <div class="form-group">
-                            <label for="packaging_size">Packaging Size</label>
+                            <label>Packaging Size</label>
                             <select id="packaging_size" required>
                                 <option value="SMALL">Small</option>
                                 <option value="MEDIUM">Medium</option>
@@ -176,28 +163,36 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="quantity">Quantity</label>
+                            <label>Quantity (Boxes)</label>
                             <input type="number" id="quantity" min="1" required>
                         </div>
                         <div class="form-group">
-                            <label for="unit_price">Unit Price (R)</label>
+                            <label>Unit Price (R)</label>
                             <input type="number" id="unit_price" step="0.01" min="0.01" required>
                         </div>
-                        <div class="form-group">
-                            <label for="payment_method">Payment Method</label>
-                            <select id="payment_method" required>
-                                <option value="CASH">Cash</option>
-                                <option value="MOBILE_MONEY">Mobile Money</option>
-                                <option value="CREDIT">Credit</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn-primary">Submit Sale</button>
+                        <button type="submit" class="btn-primary btn-large">Process Sale</button>
                     </form>
                     <div id="form-message"></div>
                 </div>
             </div>
         </main>
     </div>
+
+    <!-- Universal Modal for Add/Edit -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal glass-card">
+            <div class="modal-header">
+                <h2 id="modal-title">Add Item</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="modal-form">
+                <input type="hidden" id="edit-id">
+                <div id="modal-form-fields"></div>
+                <button type="submit" class="btn-primary btn-large" id="modal-submit-btn">Save</button>
+            </form>
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
 </body>
 </html>

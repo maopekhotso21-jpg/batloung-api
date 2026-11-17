@@ -1,5 +1,9 @@
 const API_URL = '/api';
 let chartInstance = null;
+let currentModalType = '';
+let cachedSuppliers = [];
+let cachedVendors = [];
+let cachedFruits = [];
 
 // Switch Tabs
 function switchTab(tabId) {
@@ -8,138 +12,261 @@ function switchTab(tabId) {
     
     document.getElementById(`tab-${tabId}`).classList.add('active');
     event.target.classList.add('active');
+    
+    if(tabId === 'dashboard') loadDashboard();
+    if(tabId === 'suppliers') renderSuppliersTable();
+    if(tabId === 'vendors') renderVendorsTable();
+    if(tabId === 'inventory') renderInventoryTable();
 }
 
-// Load Dashboard Data
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-ZA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    loadDashboard();
+    loadDropdowns();
+});
+
 async function loadDashboard() {
     try {
-        // Load Suppliers
         const supRes = await fetch(`${API_URL}/suppliers`);
-        const suppliers = await supRes.json();
-        
-        let supplierCount = 0;
-        if (Array.isArray(suppliers)) {
-            supplierCount = suppliers.length;
-        } else if (suppliers && typeof suppliers === 'object') {
-            supplierCount = suppliers.data ? suppliers.data.length : 0;
+        const supData = await supRes.json();
+        if(Array.isArray(supData)) {
+            cachedSuppliers = supData;
+            document.getElementById('stat-suppliers').innerText = supData.length;
         }
-        document.getElementById('stat-suppliers').innerText = supplierCount;
 
-        // Load Vendors & Populate Form Dropdown
         const venRes = await fetch(`${API_URL}/vendors`);
-        const vendors = await venRes.json();
-        document.getElementById('stat-vendors').innerText = Array.isArray(vendors) ? vendors.length : 0;
-        
-        const vendorSelect = document.getElementById('vendor_id');
-        vendorSelect.innerHTML = '<option value="">Select Vendor...</option>';
-        if (Array.isArray(vendors)) {
-            vendors.forEach(v => {
-                vendorSelect.innerHTML += `<option value="${v.vendor_id}">${v.vendor_name}</option>`;
-            });
+        const venData = await venRes.json();
+        if(Array.isArray(venData)) {
+            cachedVendors = venData;
+            document.getElementById('stat-vendors').innerText = venData.length;
         }
 
-        // Load Fruits & Populate Form Dropdown
-        const fruitRes = await fetch(`${API_URL}/fruits`);
-        const fruits = await fruitRes.json();
-        const fruitSelect = document.getElementById('fruit_id');
-        fruitSelect.innerHTML = '<option value="">Select Fruit...</option>';
-        if (Array.isArray(fruits)) {
-            fruits.forEach(f => {
-                fruitSelect.innerHTML += `<option value="${f.fruit_id}">${f.fruit_name}</option>`;
-            });
-        }
-
-        // Load Stock
         const stockRes = await fetch(`${API_URL}/fruits/stock`);
-        const stock = await stockRes.json();
-        if (Array.isArray(stock)) {
-            renderStock(stock);
-        }
+        const stockData = await stockRes.json();
+        if(Array.isArray(stockData)) renderStockChart(stockData);
         
-    } catch (error) {
-        console.error('Error loading dashboard:', error);
-    }
+    } catch (error) { console.error(error); }
 }
 
-// Render Stock Table & Chart
-function renderStock(stock) {
-    const tbody = document.getElementById('stock-body');
-    tbody.innerHTML = '';
-    
-    let totalStock = 0;
-    const chartData = {};
-
-    stock.forEach(item => {
-        totalStock += item.available_quantity;
+async function loadDropdowns() {
+    try {
+        const frRes = await fetch(`${API_URL}/fruits`);
+        cachedFruits = await frRes.json();
         
-        if (!chartData[item.fruit_name]) chartData[item.fruit_name] = 0;
-        chartData[item.fruit_name] += item.available_quantity;
+        const venRes = await fetch(`${API_URL}/vendors`);
+        const vendors = await venRes.json();
 
-        const isLow = item.available_quantity < 10;
-        const badge = isLow 
-            ? '<span class="badge badge-danger">Low Stock</span>' 
-            : '<span class="badge badge-success">In Stock</span>';
+        const venSelect = document.getElementById('vendor_id');
+        venSelect.innerHTML = '<option value="">Select Vendor...</option>';
+        if(Array.isArray(vendors)) vendors.forEach(v => venSelect.innerHTML += `<option value="${v.vendor_id}">${v.vendor_name}</option>`);
+        
+        const frSelect = document.getElementById('fruit_id');
+        frSelect.innerHTML = '<option value="">Select Fruit...</option>';
+        if(Array.isArray(cachedFruits)) cachedFruits.forEach(f => frSelect.innerHTML += `<option value="${f.fruit_id}">${f.fruit_name}</option>`);
+    } catch(e) { console.error(e); }
+}
 
+// Renderers
+function renderSuppliersTable() {
+    const tbody = document.getElementById('suppliers-table-body');
+    tbody.innerHTML = '';
+    cachedSuppliers.forEach(s => {
         tbody.innerHTML += `
             <tr>
-                <td>${item.fruit_name}</td>
-                <td>${item.packaging_size}</td>
-                <td>${item.available_quantity}</td>
-                <td>${badge}</td>
+                <td><strong>${s.business_name}</strong></td>
+                <td>${s.contact_person}</td>
+                <td>${s.phone}</td>
+                <td>${s.province}</td>
+                <td>
+                    <button class="btn-icon" onclick="editSupplier(${s.supplier_id})">✏️</button>
+                    <button class="btn-icon" onclick="deleteItem('suppliers', ${s.supplier_id})">🗑️</button>
+                </td>
             </tr>
         `;
     });
+}
 
-    document.getElementById('stat-stock').innerText = totalStock;
+function renderVendorsTable() {
+    const tbody = document.getElementById('vendors-table-body');
+    tbody.innerHTML = '';
+    cachedVendors.forEach(v => {
+        tbody.innerHTML += `
+            <tr>
+                <td><strong>${v.vendor_name}</strong></td>
+                <td>${v.phone_number}</td>
+                <td>${v.location}</td>
+                <td>
+                    <button class="btn-icon" onclick="editVendor(${v.vendor_id})">✏️</button>
+                    <button class="btn-icon" onclick="deleteItem('vendors', ${v.vendor_id})">🗑️</button>
+                </td>
+            </tr>
+        `;
+    });
+}
 
-    // Render Chart.js
+async function renderInventoryTable() {
+    const tbody = document.getElementById('stock-table-body');
+    tbody.innerHTML = '';
+    const res = await fetch(`${API_URL}/fruits/stock`);
+    const stock = await res.json();
+    
+    // Group by fruit
+    const grouped = {};
+    stock.forEach(item => {
+        if(!grouped[item.fruit_name]) grouped[item.fruit_name] = { SMALL: 0, MEDIUM: 0, LARGE: 0 };
+        grouped[item.fruit_name][item.packaging_size] = item.available_quantity;
+    });
+
+    for(const [fruit, sizes] of Object.entries(grouped)) {
+        const getBadge = (qty) => qty < 10 ? `<span class="badge badge-danger">${qty}</span>` : `<span class="badge badge-success">${qty}</span>`;
+        tbody.innerHTML += `
+            <tr>
+                <td><strong>${fruit}</strong></td>
+                <td>${getBadge(sizes.SMALL)}</td>
+                <td>${getBadge(sizes.MEDIUM)}</td>
+                <td>${getBadge(sizes.LARGE)}</td>
+            </tr>
+        `;
+    }
+}
+
+function renderStockChart(stock) {
     const ctx = document.getElementById('stockChart').getContext('2d');
     if (chartInstance) chartInstance.destroy(); 
     
+    const chartData = {};
+    stock.forEach(item => {
+        if (!chartData[item.fruit_name]) chartData[item.fruit_name] = 0;
+        chartData[item.fruit_name] += item.available_quantity;
+    });
+
+    Chart.defaults.color = '#94a3b8';
     chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: Object.keys(chartData),
             datasets: [{
-                label: 'Total Boxes',
+                label: 'Boxes in Stock',
                 data: Object.values(chartData),
-                backgroundColor: 'rgba(56, 189, 248, 0.7)',
-                borderColor: 'rgba(56, 189, 248, 1)',
-                borderWidth: 2,
-                borderRadius: 8,
-                hoverBackgroundColor: 'rgba(139, 92, 246, 0.8)',
-                hoverBorderColor: 'rgba(139, 92, 246, 1)'
+                backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                borderColor: '#3b82f6',
+                borderWidth: 1, borderRadius: 6,
+                hoverBackgroundColor: 'rgba(139, 92, 246, 0.8)'
             }]
         },
         options: {
-            responsive: true,
-            animation: { duration: 1500, easing: 'easeOutQuart' },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    titleColor: '#38bdf8',
-                    bodyColor: '#f8fafc',
-                    borderColor: 'rgba(56, 189, 248, 0.3)',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: false,
-                    callbacks: {
-                        label: function(context) {
-                            return ` ${context.parsed.y} Boxes in Stock`;
-                        }
-                    }
-                }
-            },
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1000, easing: 'easeOutQuart' },
+            plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { grid: { display: false } }
             }
         }
     });
 }
 
-// Handle Sale Form Submission
+// Modal Logic
+function openModal(type, data = null) {
+    currentModalType = type;
+    const overlay = document.getElementById('modal-overlay');
+    const title = document.getElementById('modal-title');
+    const fields = document.getElementById('modal-form-fields');
+    
+    overlay.classList.add('active');
+    fields.innerHTML = '';
+    document.getElementById('edit-id').value = data ? (data.supplier_id || data.vendor_id) : '';
+
+    if(type === 'supplier') {
+        title.innerText = data ? 'Edit Supplier' : 'Add New Supplier';
+        fields.innerHTML = `
+            <div class="form-group"><label>Business Name</label><input type="text" id="m_bname" value="${data ? data.business_name : ''}" required></div>
+            <div class="form-group"><label>Contact Person</label><input type="text" id="m_contact" value="${data ? data.contact_person : ''}" required></div>
+            <div class="form-group"><label>Phone</label><input type="text" id="m_phone" value="${data ? data.phone : ''}" required></div>
+            <div class="form-group"><label>Province</label><input type="text" id="m_prov" value="${data ? data.province : ''}" required></div>
+            <div class="form-group"><label>Address</label><input type="text" id="m_addr" value="${data ? data.address : ''}" required></div>
+        `;
+    } else if(type === 'vendor') {
+        title.innerText = data ? 'Edit Vendor' : 'Add New Vendor';
+        fields.innerHTML = `
+            <div class="form-group"><label>Vendor Name</label><input type="text" id="m_vname" value="${data ? data.vendor_name : ''}" required></div>
+            <div class="form-group"><label>Phone</label><input type="text" id="m_vphone" value="${data ? data.phone_number : ''}" required></div>
+            <div class="form-group"><label>Location</label><input type="text" id="m_vloc" value="${data ? data.location : ''}" required></div>
+        `;
+    }
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+
+function editSupplier(id) {
+    const s = cachedSuppliers.find(x => x.supplier_id === id);
+    if(s) openModal('supplier', s);
+}
+
+function editVendor(id) {
+    const v = cachedVendors.find(x => x.vendor_id === id);
+    if(v) openModal('vendor', v);
+}
+
+// Form Submissions
+document.getElementById('modal-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-id').value;
+    const isEdit = id !== '';
+    let url = '', payload = {};
+
+    if(currentModalType === 'supplier') {
+        url = isEdit ? `${API_URL}/suppliers/${id}` : `${API_URL}/suppliers`;
+        payload = {
+            business_name: document.getElementById('m_bname').value,
+            contact_person: document.getElementById('m_contact').value,
+            phone: document.getElementById('m_phone').value,
+            province: document.getElementById('m_prov').value,
+            address: document.getElementById('m_addr').value
+        };
+    } else if(currentModalType === 'vendor') {
+        url = isEdit ? `${API_URL}/vendors/${id}` : `${API_URL}/vendors`;
+        payload = {
+            vendor_name: document.getElementById('m_vname').value,
+            phone_number: document.getElementById('m_vphone').value,
+            location: document.getElementById('m_vloc').value
+        };
+    }
+
+    try {
+        const res = await fetch(url, {
+            method: isEdit ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            closeModal();
+            loadDashboard();
+            if(currentModalType === 'supplier') renderSuppliersTable();
+            if(currentModalType === 'vendor') { renderVendorsTable(); loadDropdowns(); }
+        } else {
+            alert('Failed to save. Check console.');
+        }
+    } catch(e) { console.error(e); }
+});
+
+async function deleteItem(endpoint, id) {
+    if(!confirm('Are you sure you want to delete this? This cannot be undone.')) return;
+    try {
+        const res = await fetch(`${API_URL}/${endpoint}/${id}`, { method: 'DELETE' });
+        if(res.ok) {
+            loadDashboard();
+            if(endpoint === 'suppliers') renderSuppliersTable();
+            if(endpoint === 'vendors') { renderVendorsTable(); loadDropdowns(); }
+        } else {
+            alert('Failed to delete. It might be linked to other records.');
+        }
+    } catch(e) { console.error(e); }
+}
+
+// Process Sale
 document.getElementById('sale-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msgBox = document.getElementById('form-message');
@@ -147,7 +274,7 @@ document.getElementById('sale-form').addEventListener('submit', async (e) => {
 
     const payload = {
         vendor_id: document.getElementById('vendor_id').value,
-        payment_method: document.getElementById('payment_method').value,
+        payment_method: 'CASH',
         amount_paid: 0, 
         items: [{
             fruit_id: document.getElementById('fruit_id').value,
@@ -163,84 +290,16 @@ document.getElementById('sale-form').addEventListener('submit', async (e) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        
         const data = await response.json();
 
         if (response.ok) {
-            msgBox.innerHTML = `<span style="color:var(--success);">✅ Sale Recorded! Total: R${data.total_amount}</span>`;
+            msgBox.innerHTML = `<span style="color:var(--success);"> Sale Recorded! Total: R${data.total_amount}</span>`;
             document.getElementById('sale-form').reset();
             loadDashboard();
         } else {
-            msgBox.innerHTML = `<span style="color:var(--danger);">❌ ${data.error}</span>`;
+            msgBox.innerHTML = `<span style="color:var(--danger);"> ${data.error}</span>`;
         }
     } catch (error) {
-        msgBox.innerHTML = `<span style="color:var(--danger);">❌ Server Error.</span>`;
+        msgBox.innerHTML = `<span style="color:var(--danger);"> Server Error.</span>`;
     }
 });
-
-// Handle Supplier Form Submission (NEW)
-document.getElementById('supplier-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const msgBox = document.getElementById('sup-message');
-    msgBox.innerHTML = '<span style="color:yellow;">Processing...</span>';
-
-    const payload = {
-        business_name: document.getElementById('sup_name').value,
-        contact_person: document.getElementById('sup_contact').value,
-        phone: document.getElementById('sup_phone').value,
-        province: document.getElementById('sup_province').value,
-        address: document.getElementById('sup_address').value
-    };
-
-    try {
-        const response = await fetch(`${API_URL}/suppliers`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        if (response.ok) {
-            msgBox.innerHTML = `<span style="color:var(--success);">✅ Supplier Added Successfully!</span>`;
-            document.getElementById('supplier-form').reset();
-            loadDashboard();
-        } else {
-            msgBox.innerHTML = `<span style="color:var(--danger);">❌ Failed to add supplier.</span>`;
-        }
-    } catch (error) {
-        msgBox.innerHTML = `<span style="color:var(--danger);">❌ Server Error.</span>`;
-    }
-});
-
-// Handle Vendor Form Submission (NEW)
-document.getElementById('vendor-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const msgBox = document.getElementById('ven-message');
-    msgBox.innerHTML = '<span style="color:yellow;">Processing...</span>';
-
-    const payload = {
-        vendor_name: document.getElementById('ven_name').value,
-        phone_number: document.getElementById('ven_phone').value,
-        location: document.getElementById('ven_location').value
-    };
-
-    try {
-        const response = await fetch(`${API_URL}/vendors`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        if (response.ok) {
-            msgBox.innerHTML = `<span style="color:var(--success);">✅ Vendor Added Successfully!</span>`;
-            document.getElementById('vendor-form').reset();
-            loadDashboard();
-        } else {
-            msgBox.innerHTML = `<span style="color:var(--danger);">❌ Failed to add vendor.</span>`;
-        }
-    } catch (error) {
-        msgBox.innerHTML = `<span style="color:var(--danger);">❌ Server Error.</span>`;
-    }
-});
-
-// Initialize on Load
-document.addEventListener('DOMContentLoaded', loadDashboard);
