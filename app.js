@@ -7,8 +7,8 @@ const supplierRoutes = require('./routes/supplierRoutes');
 const fruitRoutes = require('./routes/fruitRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const purchaseRoutes = require('./routes/purchaseRoutes');
-const saleRoutes = require('./routes/saleRoutes');       // ADDED SALES
-const reportRoutes = require('./routes/reportRoutes');   // ADDED REPORTS
+const saleRoutes = require('./routes/saleRoutes');       
+const reportRoutes = require('./routes/reportRoutes');   
 
 const app = express();
 
@@ -22,8 +22,8 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/fruits', fruitRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/purchases', purchaseRoutes);
-app.use('/api/sales', saleRoutes);                     // ADDED SALES
-app.use('/api/reports', reportRoutes);                 // ADDED REPORTS
+app.use('/api/sales', saleRoutes);                     
+app.use('/api/reports', reportRoutes);                 
 
 // 4. Test Route
 app.get('/api/test', async (req, res) => {
@@ -35,18 +35,33 @@ app.get('/api/test', async (req, res) => {
     }
 });
 
-// 5. 404 Handler
+// 5. Debug Route (To check database numbers)
+app.get('/api/debug', async (req, res) => {
+    try {
+        const [sup] = await pool.query('SELECT COUNT(*) as count FROM suppliers');
+        const [stk] = await pool.query('SELECT COUNT(*) as count, SUM(available_quantity) as total FROM stock');
+        res.json({
+            supplier_count: sup[0].count,
+            stock_rows: stk[0].count,
+            total_boxes: stk[0].total
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 6. 404 Handler
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
-// 6. Global Error Handler
+// 7. Global Error Handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong on the server!' });
 });
 
-// 7. Start Server
+// 8. Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
