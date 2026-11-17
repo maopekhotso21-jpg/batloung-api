@@ -5,7 +5,7 @@ const pool = mysql.createPool({
     host: 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com',
     user: '2FJvTVQitAAxa41.root',
     password: 'M4vCFgzduuPCEGMX',
-    database: 'batlounge_db', // Try with 'e' first
+    database: 'Batloung_db', // Try with 'e' first
     port: 4000,
     ssl: {
         rejectUnauthorized: false
