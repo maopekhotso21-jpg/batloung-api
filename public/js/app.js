@@ -16,31 +16,50 @@ async function loadDashboard() {
         // Load Suppliers
         const supRes = await fetch(`${API_URL}/suppliers`);
         const suppliers = await supRes.json();
-        document.getElementById('stat-suppliers').innerText = suppliers.length;
+        
+        // Log this to the browser console to see what it actually is
+        console.log("Suppliers Data:", suppliers); 
+
+        // Bulletproof way to get the length
+        let supplierCount = 0;
+        if (Array.isArray(suppliers)) {
+            supplierCount = suppliers.length;
+        } else if (suppliers && typeof suppliers === 'object') {
+            // Sometimes APIs return { data: [...] }
+            supplierCount = suppliers.data ? suppliers.data.length : 0;
+        }
+        document.getElementById('stat-suppliers').innerText = supplierCount;
 
         // Load Vendors & Populate Form Dropdown
         const venRes = await fetch(`${API_URL}/vendors`);
         const vendors = await venRes.json();
-        document.getElementById('stat-vendors').innerText = vendors.length;
+        document.getElementById('stat-vendors').innerText = Array.isArray(vendors) ? vendors.length : 0;
+        
         const vendorSelect = document.getElementById('vendor_id');
-        vendorSelect.innerHTML = '<option value="">Select Vendor...</option>'; // Reset options
-        vendors.forEach(v => {
-            vendorSelect.innerHTML += `<option value="${v.vendor_id}">${v.vendor_name}</option>`;
-        });
+        vendorSelect.innerHTML = '<option value="">Select Vendor...</option>';
+        if (Array.isArray(vendors)) {
+            vendors.forEach(v => {
+                vendorSelect.innerHTML += `<option value="${v.vendor_id}">${v.vendor_name}</option>`;
+            });
+        }
 
         // Load Fruits & Populate Form Dropdown
         const fruitRes = await fetch(`${API_URL}/fruits`);
         const fruits = await fruitRes.json();
         const fruitSelect = document.getElementById('fruit_id');
-        fruitSelect.innerHTML = '<option value="">Select Fruit...</option>'; // Reset options
-        fruits.forEach(f => {
-            fruitSelect.innerHTML += `<option value="${f.fruit_id}">${f.fruit_name}</option>`;
-        });
+        fruitSelect.innerHTML = '<option value="">Select Fruit...</option>';
+        if (Array.isArray(fruits)) {
+            fruits.forEach(f => {
+                fruitSelect.innerHTML += `<option value="${f.fruit_id}">${f.fruit_name}</option>`;
+            });
+        }
 
         // Load Stock
         const stockRes = await fetch(`${API_URL}/fruits/stock`);
         const stock = await stockRes.json();
-        renderStock(stock);
+        if (Array.isArray(stock)) {
+            renderStock(stock);
+        }
         
     } catch (error) {
         console.error('Error loading dashboard:', error);
@@ -165,14 +184,14 @@ document.getElementById('sale-form').addEventListener('submit', async (e) => {
         const data = await response.json();
 
         if (response.ok) {
-            msgBox.innerHTML = `<span style="color:var(--success);">✅ Sale Recorded! Total: R${data.total_amount}</span>`;
+            msgBox.innerHTML = `<span style="color:var(--success);"> Sale Recorded! Total: R${data.total_amount}</span>`;
             document.getElementById('sale-form').reset();
             loadDashboard(); // Refresh data to show updated stock
         } else {
-            msgBox.innerHTML = `<span style="color:var(--danger);">❌ ${data.error}</span>`;
+            msgBox.innerHTML = `<span style="color:var(--danger);"> ${data.error}</span>`;
         }
     } catch (error) {
-        msgBox.innerHTML = `<span style="color:var(--danger);">❌ Server Error.</span>`;
+        msgBox.innerHTML = `<span style="color:var(--danger);">Server Error.</span>`;
     }
 });
 
