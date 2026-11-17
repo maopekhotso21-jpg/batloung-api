@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboard() {
     try {
+        // 1. Get Suppliers
         const supRes = await fetch(`${API_URL}/suppliers`);
         const supData = await supRes.json();
         if(Array.isArray(supData)) {
@@ -35,6 +36,7 @@ async function loadDashboard() {
             document.getElementById('stat-suppliers').innerText = supData.length;
         }
 
+        // 2. Get Vendors
         const venRes = await fetch(`${API_URL}/vendors`);
         const venData = await venRes.json();
         if(Array.isArray(venData)) {
@@ -42,11 +44,23 @@ async function loadDashboard() {
             document.getElementById('stat-vendors').innerText = venData.length;
         }
 
+        // 3. Get Stock
         const stockRes = await fetch(`${API_URL}/fruits/stock`);
         const stockData = await stockRes.json();
-        if(Array.isArray(stockData)) renderStockChart(stockData);
         
-    } catch (error) { console.error(error); }
+        if(Array.isArray(stockData)) {
+            // Calculate the total boxes for the stat card
+            let totalBoxes = 0;
+            stockData.forEach(item => {
+                totalBoxes += item.available_quantity;
+            });
+            document.getElementById('stat-stock').innerText = totalBoxes;
+            
+            // Render the chart
+            renderStockChart(stockData);
+        }
+        
+    } catch (error) { console.error("Dashboard load error:", error); }
 }
 
 async function loadDropdowns() {
@@ -184,7 +198,19 @@ function openModal(type, data = null) {
             <div class="form-group"><label>Business Name</label><input type="text" id="m_bname" value="${data ? data.business_name : ''}" required></div>
             <div class="form-group"><label>Contact Person</label><input type="text" id="m_contact" value="${data ? data.contact_person : ''}" required></div>
             <div class="form-group"><label>Phone</label><input type="text" id="m_phone" value="${data ? data.phone : ''}" required></div>
-            <div class="form-group"><label>Province</label><input type="text" id="m_prov" value="${data ? data.province : ''}" required></div>
+            <div class="form-group">
+                <label>Province</label>
+                <select id="m_prov" required>
+                    <option value="Gauteng" ${data && data.province === 'Gauteng' ? 'selected' : ''}>Gauteng</option>
+                    <option value="Free State" ${data && data.province === 'Free State' ? 'selected' : ''}>Free State</option>
+                    <option value="KwaZulu-Natal" ${data && data.province === 'KwaZulu-Natal' ? 'selected' : ''}>KwaZulu-Natal</option>
+                    <option value="Western Cape" ${data && data.province === 'Western Cape' ? 'selected' : ''}>Western Cape</option>
+                    <option value="Eastern Cape" ${data && data.province === 'Eastern Cape' ? 'selected' : ''}>Eastern Cape</option>
+                    <option value="Limpopo" ${data && data.province === 'Limpopo' ? 'selected' : ''}>Limpopo</option>
+                    <option value="Mpumalanga" ${data && data.province === 'Mpumalanga' ? 'selected' : ''}>Mpumalanga</option>
+                    <option value="North West" ${data && data.province === 'North West' ? 'selected' : ''}>North West</option>
+                </select>
+            </div>
             <div class="form-group"><label>Address</label><input type="text" id="m_addr" value="${data ? data.address : ''}" required></div>
         `;
     } else if(type === 'vendor') {
@@ -247,7 +273,8 @@ document.getElementById('modal-form').addEventListener('submit', async (e) => {
             if(currentModalType === 'supplier') renderSuppliersTable();
             if(currentModalType === 'vendor') { renderVendorsTable(); loadDropdowns(); }
         } else {
-            alert('Failed to save. Check console.');
+            const errData = await res.json();
+            alert('Failed to save: ' + (errData.error || 'Check console.'));
         }
     } catch(e) { console.error(e); }
 });
