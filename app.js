@@ -15,6 +15,7 @@ const app = express();
 // 2. Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public')); // Serve frontend files
 
 // 3. API Routes
 app.use('/api/suppliers', supplierRoutes);

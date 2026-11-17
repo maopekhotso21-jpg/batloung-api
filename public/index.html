@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batloung Farm | Modern Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>🍎 Batloung</h2>
+                <p>Farm Management</p>
+            </div>
+            <nav>
+                <a href="#" class="active" onclick="switchTab('dashboard')">Dashboard</a>
+                <a href="#" onclick="switchTab('inventory')">Inventory</a>
+                <a href="#" onclick="switchTab('sales')">Record Sale</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-content active">
+                <header class="top-header">
+                    <h1>Overview</h1>
+                    <p>Welcome back, Administrator</p>
+                </header>
+
+                <div class="stats-grid">
+                    <div class="stat-card glass">
+                        <h3>Suppliers</h3>
+                        <p id="stat-suppliers">0</p>
+                    </div>
+                    <div class="stat-card glass">
+                        <h3>Active Vendors</h3>
+                        <p id="stat-vendors">0</p>
+                    </div>
+                    <div class="stat-card glass">
+                        <h3>Total Boxes in Stock</h3>
+                        <p id="stat-stock">0</p>
+                    </div>
+                </div>
+
+                <div class="chart-container glass">
+                    <h3>Stock by Fruit</h3>
+                    <canvas id="stockChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div id="tab-inventory" class="tab-content">
+                <header class="top-header">
+                    <h1>Inventory & Stock</h1>
+                    <p>Live stock levels across all packaging sizes</p>
+                </header>
+                <div class="glass table-container">
+                    <table id="stock-table">
+                        <thead>
+                            <tr>
+                                <th>Fruit</th>
+                                <th>Packaging Size</th>
+                                <th>Available Quantity</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-body">
+                            <tr><td colspan="4">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Record Sale Tab -->
+            <div id="tab-sales" class="tab-content">
+                <header class="top-header">
+                    <h1>Record a Sale</h1>
+                    <p>Deduct stock and log vendor transactions</p>
+                </header>
+                <div class="glass form-container">
+                    <form id="sale-form">
+                        <div class="form-group">
+                            <label for="vendor_id">Vendor</label>
+                            <select id="vendor_id" required>
+                                <option value="">Select Vendor...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fruit_id">Fruit</label>
+                            <select id="fruit_id" required>
+                                <option value="">Select Fruit...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="packaging_size">Packaging Size</label>
+                            <select id="packaging_size" required>
+                                <option value="SMALL">Small</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="LARGE">Large</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="quantity">Quantity</label>
+                            <input type="number" id="quantity" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="unit_price">Unit Price (R)</label>
+                            <input type="number" id="unit_price" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="payment_method">Payment Method</label>
+                            <select id="payment_method" required>
+                                <option value="CASH">Cash</option>
+                                <option value="MOBILE_MONEY">Mobile Money</option>
+                                <option value="CREDIT">Credit</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary">Submit Sale</button>
+                    </form>
+                    <div id="form-message"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+</html>
