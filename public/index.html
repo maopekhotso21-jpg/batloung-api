@@ -179,6 +179,33 @@
                     </form>
                     <div id="form-message"></div>
                 </div>
+
+                <section class="purchase-history-section sales-history-section">
+                    <div class="section-heading">
+                        <div>
+                            <h2>Sales history</h2>
+                            <p>Select any sale row to see the vendor, items, and payment details.</p>
+                        </div>
+                        <span id="sale-count" class="history-count">0 sales</span>
+                    </div>
+                    <div class="glass-card table-container">
+                        <table class="purchase-table">
+                            <thead>
+                                <tr>
+                                    <th>Sale</th>
+                                    <th>Date</th>
+                                    <th>Vendor</th>
+                                    <th>Boxes</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="sales-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="sale-detail" class="glass-card purchase-detail" hidden aria-live="polite"></div>
+                </section>
             </div>
 
             <!-- Purchases -->

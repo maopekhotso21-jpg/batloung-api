@@ -1,5 +1,58 @@
 const pool = require('../config/db');
 
+// List sales with vendor and box-count summaries for the sales history table.
+exports.getSales = async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT s.sale_id, s.sale_date, s.total_amount, s.amount_paid,
+                   s.payment_method, s.payment_status, v.vendor_name,
+                   COALESCE(SUM(sd.quantity), 0) AS total_boxes,
+                   COUNT(sd.sale_detail_id) AS item_count
+            FROM sales s
+            JOIN vendors v ON v.vendor_id = s.vendor_id
+            LEFT JOIN salesdetails sd ON sd.sale_id = s.sale_id
+            GROUP BY s.sale_id, s.sale_date, s.total_amount, s.amount_paid,
+                     s.payment_method, s.payment_status, v.vendor_name
+            ORDER BY s.sale_date DESC, s.sale_id DESC
+        `);
+        res.status(200).json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Return the vendor and line items for a selected sale.
+exports.getSaleById = async (req, res) => {
+    try {
+        const [saleRows] = await pool.query(`
+            SELECT s.sale_id, s.sale_date, s.total_amount, s.amount_paid,
+                   s.payment_method, s.payment_status,
+                   v.vendor_name, v.phone_number, v.location
+            FROM sales s
+            JOIN vendors v ON v.vendor_id = s.vendor_id
+            WHERE s.sale_id = ?
+        `, [req.params.id]);
+
+        if (saleRows.length === 0) {
+            return res.status(404).json({ error: 'Sale not found' });
+        }
+
+        const [items] = await pool.query(`
+            SELECT sd.sale_detail_id, sd.fruit_id, f.fruit_name,
+                   sd.packaging_size, sd.quantity, sd.unit_price,
+                   (sd.quantity * sd.unit_price) AS line_total
+            FROM salesdetails sd
+            JOIN fruits f ON f.fruit_id = sd.fruit_id
+            WHERE sd.sale_id = ?
+            ORDER BY sd.sale_detail_id
+        `, [req.params.id]);
+
+        res.status(200).json({ ...saleRows[0], items });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // Record a new sale (Decreases Stock, handles payments)
 exports.createSale = async (req, res) => {
     // Body: { vendor_id, payment_method?, amount_paid?, items: [{ fruit_id, packaging_size, quantity, unit_price }] }

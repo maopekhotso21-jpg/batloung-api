@@ -140,10 +140,10 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
 .purchase-history-section { margin-top: 2rem; }
 .history-count { color: var(--text-muted); border: 1px solid var(--glass-border); border-radius: 999px; padding: 0.45rem 0.8rem; font-size: 0.82rem; white-space: nowrap; }
 .purchase-table th:last-child, .purchase-table td:last-child { text-align: right; }
-.purchase-row { cursor: pointer; transition: background 0.2s ease, box-shadow 0.2s ease; outline: none; }
-.purchase-row:hover td, .purchase-row:focus td { background: rgba(59, 130, 246, 0.08); }
-.purchase-row:focus-visible { box-shadow: inset 0 0 0 2px var(--primary); }
-.purchase-row.selected td { background: rgba(59, 130, 246, 0.12); }
+.purchase-row, .sale-row { cursor: pointer; transition: background 0.2s ease, box-shadow 0.2s ease; outline: none; }
+.purchase-row:hover td, .purchase-row:focus td, .sale-row:hover td, .sale-row:focus td { background: rgba(59, 130, 246, 0.08); }
+.purchase-row:focus-visible, .sale-row:focus-visible { box-shadow: inset 0 0 0 2px var(--primary); }
+.purchase-row.selected td, .sale-row.selected td { background: rgba(59, 130, 246, 0.12); }
 .purchase-amount { font-weight: 600; color: #c4b5fd; }
 .row-hint { color: var(--text-muted); font-size: 0.82rem; white-space: nowrap; }
 .row-hint span { color: #93c5fd; margin-left: 0.25rem; }
@@ -159,6 +159,11 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
 .detail-table-wrap { margin-top: 1.25rem; }
 .detail-table-wrap table { min-width: 560px; }
 .purchase-detail[hidden] { display: none; }
+.sale-status { display: inline-flex; align-items: center; padding: 0.35rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.sale-status-paid { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); }
+.sale-status-partial { color: #fcd34d; background: rgba(245, 158, 11, 0.12); }
+.sale-status-unpaid { color: #fca5a5; background: rgba(239, 68, 68, 0.12); }
+.sales-history-section { margin-bottom: 2rem; }
 
 /* Modals */
 .modal-overlay {
