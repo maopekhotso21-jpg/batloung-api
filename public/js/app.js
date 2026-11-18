@@ -6,17 +6,19 @@ let cachedVendors = [];
 let cachedFruits = [];
 
 // Switch Tabs
-function switchTab(tabId) {
+function switchTab(tabId, link) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
     
     document.getElementById(`tab-${tabId}`).classList.add('active');
-    event.target.classList.add('active');
+    if (link) link.classList.add('active');
+    else document.querySelector(`nav a[onclick^="switchTab('${tabId}'"]`)?.classList.add('active');
     
     if(tabId === 'dashboard') loadDashboard();
     if(tabId === 'suppliers') renderSuppliersTable();
     if(tabId === 'vendors') renderVendorsTable();
     if(tabId === 'inventory') renderInventoryTable();
+    if(tabId === 'purchases') loadPurchases();
 }
 
 // Initialize
@@ -24,7 +26,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-ZA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     loadDashboard();
     loadDropdowns();
+    loadPurchaseDropdowns();
+    document.getElementById('quantity').addEventListener('input', updateSaleTotal);
+    document.getElementById('unit_price').addEventListener('input', updateSaleTotal);
 });
+
+function updateSaleTotal() {
+    const quantity = Number(document.getElementById('quantity').value);
+    const pricePerBox = Number(document.getElementById('unit_price').value);
+    const total = quantity > 0 && pricePerBox > 0 ? quantity * pricePerBox : 0;
+    document.getElementById('sale-total').innerText = `R${total.toFixed(2)}`;
+}
 
 async function loadDashboard() {
     try {
@@ -80,6 +92,173 @@ async function loadDropdowns() {
         if(Array.isArray(cachedFruits)) cachedFruits.forEach(f => frSelect.innerHTML += `<option value="${f.fruit_id}">${f.fruit_name}</option>`);
     } catch(e) { console.error(e); }
 }
+
+async function loadPurchaseDropdowns() {
+    try {
+        const [supplierRes, fruitRes] = await Promise.all([
+            fetch(`${API_URL}/suppliers`),
+            fetch(`${API_URL}/fruits`)
+        ]);
+        const suppliers = await supplierRes.json();
+        const fruits = await fruitRes.json();
+        const supplierSelect = document.getElementById('purchase_supplier_id');
+        const fruitSelect = document.getElementById('purchase_fruit_id');
+
+        supplierSelect.innerHTML = '<option value="">Select supplier...</option>';
+        fruitSelect.innerHTML = '<option value="">Select fruit...</option>';
+        if (Array.isArray(suppliers)) {
+            suppliers.forEach(supplier => supplierSelect.add(new Option(supplier.business_name, supplier.supplier_id)));
+        }
+        if (Array.isArray(fruits)) {
+            fruits.forEach(fruit => fruitSelect.add(new Option(fruit.fruit_name, fruit.fruit_id)));
+        }
+    } catch (error) {
+        console.error('Purchase dropdown load error:', error);
+    }
+}
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(Number(value) || 0);
+}
+
+function formatPurchaseDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-ZA', {
+        day: 'numeric', month: 'short', year: 'numeric'
+    });
+}
+
+async function loadPurchases() {
+    const tbody = document.getElementById('purchases-table-body');
+    const count = document.getElementById('purchase-count');
+    tbody.innerHTML = '<tr><td colspan="6" class="table-state">Loading purchase history…</td></tr>';
+    try {
+        const response = await fetch(`${API_URL}/purchases`);
+        const purchases = await response.json();
+        if (!response.ok) throw new Error(purchases.error || 'Unable to load purchases');
+
+        count.textContent = `${purchases.length} ${purchases.length === 1 ? 'purchase' : 'purchases'}`;
+        if (purchases.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="table-state">No purchases yet. Record a delivery above to get started.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = purchases.map(purchase => `
+            <tr class="purchase-row" tabindex="0" role="button" aria-label="View purchase #${purchase.purchase_id} from ${escapeHtml(purchase.supplier_name)}" onclick="showPurchaseDetails(${purchase.purchase_id}, this)" onkeydown="if(event.key === 'Enter' || event.key === ' '){event.preventDefault(); showPurchaseDetails(${purchase.purchase_id}, this)}">
+                <td><strong>#${purchase.purchase_id}</strong></td>
+                <td>${escapeHtml(formatPurchaseDate(purchase.purchase_date))}</td>
+                <td>${escapeHtml(purchase.supplier_name)}</td>
+                <td>${Number(purchase.total_boxes)}</td>
+                <td class="purchase-amount">${formatCurrency(purchase.total_amount)}</td>
+                <td class="row-hint">View details <span aria-hidden="true">↗</span></td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="6" class="table-state error-state">${escapeHtml(error.message)}</td></tr>`;
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+}
+
+async function showPurchaseDetails(purchaseId, selectedRow) {
+    const detail = document.getElementById('purchase-detail');
+    document.querySelectorAll('.purchase-row').forEach(row => row.classList.remove('selected'));
+    selectedRow.classList.add('selected');
+    detail.hidden = false;
+    detail.innerHTML = '<p class="table-state">Loading purchase details…</p>';
+    try {
+        const response = await fetch(`${API_URL}/purchases/${purchaseId}`);
+        const purchase = await response.json();
+        if (!response.ok) throw new Error(purchase.error || 'Unable to load purchase details');
+
+        const itemRows = purchase.items.length ? purchase.items.map(item => `
+            <tr>
+                <td>${escapeHtml(item.fruit_name)}</td>
+                <td>${escapeHtml(String(item.packaging_size).toLowerCase())}</td>
+                <td>${Number(item.quantity)}</td>
+                <td>${formatCurrency(item.unit_cost)}</td>
+                <td>${formatCurrency(item.line_total)}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="5" class="table-state">No item details were saved for this purchase.</td></tr>';
+
+        detail.innerHTML = `
+            <div class="detail-heading">
+                <div>
+                    <span class="eyebrow">Purchase detail</span>
+                    <h3>Purchase #${purchase.purchase_id}</h3>
+                    <p>${escapeHtml(purchase.supplier_name)} <span class="detail-divider">·</span> ${escapeHtml(formatPurchaseDate(purchase.purchase_date))}</p>
+                </div>
+                <div class="detail-total"><span>Total cost</span><strong>${formatCurrency(purchase.total_amount)}</strong></div>
+            </div>
+            <div class="detail-contact">${purchase.contact_person ? `Supplier contact: ${escapeHtml(purchase.contact_person)}${purchase.phone ? ` · ${escapeHtml(purchase.phone)}` : ''}` : ''}</div>
+            <div class="table-container detail-table-wrap">
+                <table>
+                    <thead><tr><th>Fruit</th><th>Size</th><th>Boxes</th><th>Cost / box</th><th>Line total</th></tr></thead>
+                    <tbody>${itemRows}</tbody>
+                </table>
+            </div>
+        `;
+        detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (error) {
+        detail.innerHTML = `<p class="error-state">${escapeHtml(error.message)}</p>`;
+    }
+}
+
+function updatePurchaseTotal() {
+    const quantity = Number(document.getElementById('purchase_quantity').value);
+    const unitCost = Number(document.getElementById('purchase_unit_cost').value);
+    const total = quantity > 0 && unitCost > 0 ? quantity * unitCost : 0;
+    document.getElementById('purchase-total').textContent = formatCurrency(total);
+}
+
+document.getElementById('purchase_quantity').addEventListener('input', updatePurchaseTotal);
+document.getElementById('purchase_unit_cost').addEventListener('input', updatePurchaseTotal);
+
+async function submitPurchase(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const message = document.getElementById('purchase-form-message');
+    const submitButton = form.querySelector('button[type="submit"]');
+    const payload = {
+        supplier_id: Number(document.getElementById('purchase_supplier_id').value),
+        items: [{
+            fruit_id: Number(document.getElementById('purchase_fruit_id').value),
+            packaging_size: document.getElementById('purchase_packaging_size').value,
+            quantity: Number(document.getElementById('purchase_quantity').value),
+            unit_cost: Number(document.getElementById('purchase_unit_cost').value)
+        }]
+    };
+
+    submitButton.disabled = true;
+    message.textContent = 'Saving purchase…';
+    message.className = 'form-message';
+    try {
+        const response = await fetch(`${API_URL}/purchases`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Unable to save purchase');
+
+        message.textContent = `Purchase #${result.purchase_id} saved · ${formatCurrency(result.total_amount)}`;
+        message.classList.add('success-state');
+        form.reset();
+        updatePurchaseTotal();
+        await Promise.all([loadPurchases(), loadDashboard()]);
+    } catch (error) {
+        message.textContent = error.message;
+        message.classList.add('error-state');
+    } finally {
+        submitButton.disabled = false;
+    }
+}
+
+document.getElementById('purchase-form').addEventListener('submit', submitPurchase);
 
 // Renderers
 function renderSuppliersTable() {
@@ -322,6 +501,7 @@ document.getElementById('sale-form').addEventListener('submit', async (e) => {
         if (response.ok) {
             msgBox.innerHTML = `<span style="color:var(--success);"> Sale Recorded! Total: R${data.total_amount}</span>`;
             document.getElementById('sale-form').reset();
+            updateSaleTotal();
             loadDashboard();
         } else {
             msgBox.innerHTML = `<span style="color:var(--danger);"> ${data.error}</span>`;

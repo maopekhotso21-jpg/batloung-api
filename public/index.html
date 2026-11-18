@@ -14,14 +14,15 @@
         <aside class="sidebar glass-panel">
             <div class="logo">
                 <h2>🍎 Batloung</h2>
-                <p>Enterprise Suite</p>
+                <p>Farm</p>
             </div>
             <nav>
-                <a href="#" class="active" onclick="switchTab('dashboard')">Overview</a>
-                <a href="#" onclick="switchTab('suppliers')">Suppliers</a>
-                <a href="#" onclick="switchTab('inventory')">Inventory</a>
-                <a href="#" onclick="switchTab('vendors')">Vendors</a>
-                <a href="#" onclick="switchTab('sales')">Record Sale</a>
+                <a href="#" class="active" onclick="switchTab('dashboard', this)">Overview</a>
+                <a href="#" onclick="switchTab('suppliers', this)">Suppliers</a>
+                <a href="#" onclick="switchTab('inventory', this)">Inventory</a>
+                <a href="#" onclick="switchTab('vendors', this)">Vendors</a>
+                <a href="#" onclick="switchTab('sales', this)">Sales</a>
+                <a href="#" onclick="switchTab('purchases', this)">Purchases</a>
             </nav>
         </aside>
 
@@ -167,13 +168,92 @@
                             <input type="number" id="quantity" min="1" required>
                         </div>
                         <div class="form-group">
-                            <label>Unit Price (R)</label>
+                            <label>Price per Box (R)</label>
                             <input type="number" id="unit_price" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Total Price</label>
+                            <p id="sale-total" aria-live="polite">R0.00</p>
                         </div>
                         <button type="submit" class="btn-primary btn-large">Process Sale</button>
                     </form>
                     <div id="form-message"></div>
                 </div>
+            </div>
+
+            <!-- Purchases -->
+            <div id="tab-purchases" class="tab-content">
+                <header class="top-header">
+                    <h1>Purchases</h1>
+                    <p>Record supplier deliveries and browse your purchase history.</p>
+                </header>
+
+                <section class="glass-card purchase-entry">
+                    <div class="section-heading">
+                        <div>
+                            <h2>Record a purchase</h2>
+                            <p>Add a delivery to stock and keep its cost on record.</p>
+                        </div>
+                    </div>
+                    <form id="purchase-form" class="purchase-form">
+                        <div class="form-group">
+                            <label for="purchase_supplier_id">Supplier</label>
+                            <select id="purchase_supplier_id" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="purchase_fruit_id">Fruit</label>
+                            <select id="purchase_fruit_id" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="purchase_packaging_size">Packaging size</label>
+                            <select id="purchase_packaging_size" required>
+                                <option value="SMALL">Small</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="LARGE">Large</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="purchase_quantity">Boxes</label>
+                            <input type="number" id="purchase_quantity" min="1" step="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="purchase_unit_cost">Cost per box (R)</label>
+                            <input type="number" id="purchase_unit_cost" min="0.01" step="0.01" required>
+                        </div>
+                        <div class="purchase-total">
+                            <span>Purchase total</span>
+                            <strong id="purchase-total">R0.00</strong>
+                        </div>
+                        <button type="submit" class="btn-primary">Save Purchase</button>
+                    </form>
+                    <div id="purchase-form-message" class="form-message" aria-live="polite"></div>
+                </section>
+
+                <section class="purchase-history-section">
+                    <div class="section-heading">
+                        <div>
+                            <h2>Purchase history</h2>
+                            <p>Select any purchase row to see its items and costs.</p>
+                        </div>
+                        <span id="purchase-count" class="history-count">0 purchases</span>
+                    </div>
+                    <div class="glass-card table-container">
+                        <table class="purchase-table">
+                            <thead>
+                                <tr>
+                                    <th>Purchase</th>
+                                    <th>Date</th>
+                                    <th>Supplier</th>
+                                    <th>Boxes</th>
+                                    <th>Total</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="purchases-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="purchase-detail" class="glass-card purchase-detail" hidden aria-live="polite"></div>
+                </section>
             </div>
         </main>
     </div>
