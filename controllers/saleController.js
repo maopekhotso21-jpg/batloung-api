@@ -4,15 +4,13 @@ const pool = require('../config/db');
 exports.getSales = async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT s.sale_id, s.sale_date, s.total_amount, s.amount_paid,
-                   s.payment_method, s.payment_status, v.vendor_name,
+                 SELECT s.sale_id, s.sale_date, s.total_amount, v.vendor_name,
                    COALESCE(SUM(sd.quantity), 0) AS total_boxes,
                    COUNT(sd.sale_detail_id) AS item_count
             FROM sales s
             JOIN vendors v ON v.vendor_id = s.vendor_id
             LEFT JOIN salesdetails sd ON sd.sale_id = s.sale_id
-            GROUP BY s.sale_id, s.sale_date, s.total_amount, s.amount_paid,
-                     s.payment_method, s.payment_status, v.vendor_name
+            GROUP BY s.sale_id, s.sale_date, s.total_amount, v.vendor_name
             ORDER BY s.sale_date DESC, s.sale_id DESC
         `);
         res.status(200).json(rows);
@@ -25,8 +23,7 @@ exports.getSales = async (req, res) => {
 exports.getSaleById = async (req, res) => {
     try {
         const [saleRows] = await pool.query(`
-            SELECT s.sale_id, s.sale_date, s.total_amount, s.amount_paid,
-                   s.payment_method, s.payment_status,
+                 SELECT s.sale_id, s.sale_date, s.total_amount,
                    v.vendor_name, v.phone_number, v.location
             FROM sales s
             JOIN vendors v ON v.vendor_id = s.vendor_id

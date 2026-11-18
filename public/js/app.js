@@ -212,7 +212,7 @@ async function showPurchaseDetails(purchaseId, selectedRow) {
 async function loadSales() {
     const tbody = document.getElementById('sales-table-body');
     const count = document.getElementById('sale-count');
-    tbody.innerHTML = '<tr><td colspan="7" class="table-state">Loading sales history…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="table-state">Loading sales history…</td></tr>';
     try {
         const response = await fetch(`${API_URL}/sales`);
         const sales = await response.json();
@@ -220,28 +220,22 @@ async function loadSales() {
 
         count.textContent = `${sales.length} ${sales.length === 1 ? 'sale' : 'sales'}`;
         if (sales.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="table-state">No sales recorded yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="table-state">No sales recorded yet.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = sales.map(sale => {
-            const statusClass = sale.payment_status === 'PAID'
-                ? 'sale-status-paid'
-                : sale.payment_status === 'PARTIALLY_PAID' ? 'sale-status-partial' : 'sale-status-unpaid';
-            return `
+        tbody.innerHTML = sales.map(sale => `
                 <tr class="sale-row" tabindex="0" role="button" aria-label="View sale #${sale.sale_id} to ${escapeHtml(sale.vendor_name)}" onclick="showSaleDetails(${sale.sale_id}, this)" onkeydown="if(event.key === 'Enter' || event.key === ' '){event.preventDefault(); showSaleDetails(${sale.sale_id}, this)}">
                     <td><strong>#${sale.sale_id}</strong></td>
                     <td>${escapeHtml(formatPurchaseDate(sale.sale_date))}</td>
                     <td>${escapeHtml(sale.vendor_name)}</td>
                     <td>${Number(sale.total_boxes)}</td>
                     <td class="purchase-amount">${formatCurrency(sale.total_amount)}</td>
-                    <td><span class="sale-status ${statusClass}">${escapeHtml(String(sale.payment_status).replaceAll('_', ' '))}</span></td>
                     <td class="row-hint">View details <span aria-hidden="true">↗</span></td>
                 </tr>
-            `;
-        }).join('');
+        `).join('');
     } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="7" class="table-state error-state">${escapeHtml(error.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="table-state error-state">${escapeHtml(error.message)}</td></tr>`;
     }
 }
 
@@ -265,8 +259,6 @@ async function showSaleDetails(saleId, selectedRow) {
                 <td>${formatCurrency(item.line_total)}</td>
             </tr>
         `).join('') : '<tr><td colspan="5" class="table-state">No item details were saved for this sale.</td></tr>';
-        const amountDue = Math.max(0, Number(sale.total_amount) - Number(sale.amount_paid));
-
         detail.innerHTML = `
             <div class="detail-heading">
                 <div>
@@ -277,7 +269,6 @@ async function showSaleDetails(saleId, selectedRow) {
                 </div>
                 <div class="detail-total"><span>Total sale</span><strong>${formatCurrency(sale.total_amount)}</strong></div>
             </div>
-            <div class="detail-contact">Payment: ${escapeHtml(String(sale.payment_method).replaceAll('_', ' '))} · ${escapeHtml(String(sale.payment_status).replaceAll('_', ' '))} · Paid ${formatCurrency(sale.amount_paid)} · Due ${formatCurrency(amountDue)}</div>
             <div class="table-container detail-table-wrap">
                 <table>
                     <thead><tr><th>Fruit</th><th>Size</th><th>Boxes</th><th>Price / box</th><th>Line total</th></tr></thead>
