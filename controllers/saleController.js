@@ -194,8 +194,6 @@ exports.createSale = async (req, res) => {
             message: 'Sale recorded and stock updated successfully',
             sale_id: saleId,
             total_amount: (totalCents / 100).toFixed(2),
-            amount_paid: (amountPaidCents / 100).toFixed(2),
-            payment_status: paymentStatus,
             items_recorded: normalizedItems.length
         });
     } catch (error) {
