@@ -4,6 +4,9 @@ let currentModalType = '';
 let cachedSuppliers = [];
 let cachedVendors = [];
 let cachedFruits = [];
+let cachedStock = [];
+const LOCAL_STOCK_KEY = 'batloung.localStockIncreases';
+const LOCAL_PURCHASE_STATUS_KEY = 'batloung.purchasePaymentStatus';
 
 // Switch Tabs
 function switchTab(tabId, link) {
@@ -62,15 +65,8 @@ async function loadDashboard() {
         const stockData = await stockRes.json();
         
         if(Array.isArray(stockData)) {
-            // Calculate the total boxes for the stat card
-            let totalBoxes = 0;
-            stockData.forEach(item => {
-                totalBoxes += item.available_quantity;
-            });
-            document.getElementById('stat-stock').innerText = totalBoxes;
-            
-            // Render the chart
-            renderStockChart(stockData);
+            cachedStock = stockData;
+            renderStockOverview();
         }
         
     } catch (error) { console.error("Dashboard load error:", error); }
@@ -79,7 +75,8 @@ async function loadDashboard() {
 async function loadDropdowns() {
     try {
         const frRes = await fetch(`${API_URL}/fruits`);
-        cachedFruits = await frRes.json();
+        const fruitData = await frRes.json();
+        cachedFruits = Array.isArray(fruitData) ? fruitData : [];
         
         const venRes = await fetch(`${API_URL}/vendors`);
         const vendors = await venRes.json();
@@ -91,6 +88,14 @@ async function loadDropdowns() {
         const frSelect = document.getElementById('fruit_id');
         frSelect.innerHTML = '<option value="">Select Fruit...</option>';
         if(Array.isArray(cachedFruits)) cachedFruits.forEach(f => frSelect.innerHTML += `<option value="${f.fruit_id}">${f.fruit_name}</option>`);
+
+        const stockFruitSelect = document.getElementById('stock-increase-fruit');
+        if (stockFruitSelect) {
+            stockFruitSelect.innerHTML = '<option value="">Select fruit...</option>';
+            if (Array.isArray(cachedFruits)) {
+                cachedFruits.forEach(fruit => stockFruitSelect.add(new Option(fruit.fruit_name, fruit.fruit_id)));
+            }
+        }
     } catch(e) { console.error(e); }
 }
 
@@ -132,7 +137,7 @@ function formatPurchaseDate(value) {
 async function loadPurchases() {
     const tbody = document.getElementById('purchases-table-body');
     const count = document.getElementById('purchase-count');
-    tbody.innerHTML = '<tr><td colspan="6" class="table-state">Loading purchase history…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="table-state">Loading purchase history…</td></tr>';
     try {
         const response = await fetch(`${API_URL}/purchases`);
         const purchases = await response.json();
@@ -140,7 +145,7 @@ async function loadPurchases() {
 
         count.textContent = `${purchases.length} ${purchases.length === 1 ? 'purchase' : 'purchases'}`;
         if (purchases.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="table-state">No purchases yet. Record a delivery above to get started.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="table-state">No purchases yet. Record a delivery above to get started.</td></tr>';
             return;
         }
 
@@ -151,11 +156,49 @@ async function loadPurchases() {
                 <td>${escapeHtml(purchase.supplier_name)}</td>
                 <td>${Number(purchase.total_boxes)}</td>
                 <td class="purchase-amount">${formatCurrency(purchase.total_amount)}</td>
+                <td>${renderPurchaseStatusButton(purchase.purchase_id)}</td>
                 <td class="row-hint">View details <span aria-hidden="true">↗</span></td>
             </tr>
         `).join('');
     } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="6" class="table-state error-state">${escapeHtml(error.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="table-state error-state">${escapeHtml(error.message)}</td></tr>`;
+    }
+}
+
+function readPurchasePaymentStatuses() {
+    try {
+        const statuses = JSON.parse(localStorage.getItem(LOCAL_PURCHASE_STATUS_KEY) || '{}');
+        return statuses && typeof statuses === 'object' && !Array.isArray(statuses) ? statuses : {};
+    } catch (error) {
+        console.warn('Unable to read purchase payment statuses:', error);
+        return {};
+    }
+}
+
+function isPurchasePaid(purchaseId) {
+    return readPurchasePaymentStatuses()[String(purchaseId)] === 'PAID';
+}
+
+function renderPurchaseStatusButton(purchaseId) {
+    const paid = isPurchasePaid(purchaseId);
+    const status = paid ? 'PAID' : 'UNPAID';
+    return `<button type="button" class="purchase-status-button ${paid ? 'is-paid' : 'is-unpaid'}" aria-label="Mark purchase #${Number(purchaseId)} ${paid ? 'unpaid' : 'paid'}" aria-pressed="${paid}" onclick="togglePurchasePaid(${Number(purchaseId)}, event)">${status}</button>`;
+}
+
+function togglePurchasePaid(purchaseId, event) {
+    event.stopPropagation();
+    const statuses = readPurchasePaymentStatuses();
+    const key = String(purchaseId);
+    if (statuses[key] === 'PAID') delete statuses[key];
+    else statuses[key] = 'PAID';
+    try {
+        localStorage.setItem(LOCAL_PURCHASE_STATUS_KEY, JSON.stringify(statuses));
+        event.currentTarget.outerHTML = renderPurchaseStatusButton(purchaseId);
+        const selectedRow = document.querySelector(`.purchase-row[aria-label^="View purchase #${Number(purchaseId)} "]`);
+        const detail = document.getElementById('purchase-detail');
+        if (selectedRow?.classList.contains('selected') && !detail.hidden) showPurchaseDetails(purchaseId, selectedRow);
+    } catch (error) {
+        console.error('Unable to save purchase status in this browser:', error);
     }
 }
 
@@ -195,6 +238,7 @@ async function showPurchaseDetails(purchaseId, selectedRow) {
                 </div>
                 <div class="detail-total"><span>Total cost</span><strong>${formatCurrency(purchase.total_amount)}</strong></div>
             </div>
+            <div class="purchase-detail-status"><span>Payment status</span>${renderPurchaseStatusButton(purchase.purchase_id)}</div>
             <div class="detail-contact">${purchase.contact_person ? `Supplier contact: ${escapeHtml(purchase.contact_person)}${purchase.phone ? ` · ${escapeHtml(purchase.phone)}` : ''}` : ''}</div>
             <div class="table-container detail-table-wrap">
                 <table>
@@ -374,15 +418,83 @@ function renderVendorsTable() {
 
 async function renderInventoryTable() {
     const tbody = document.getElementById('stock-table-body');
+    tbody.innerHTML = '<tr><td colspan="4" class="table-state">Loading inventory…</td></tr>';
+    try {
+        const response = await fetch(`${API_URL}/fruits/stock`);
+        const stock = await response.json();
+        if (!response.ok || !Array.isArray(stock)) throw new Error(stock.error || 'Unable to load inventory');
+        cachedStock = stock;
+        renderStockOverview();
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="4" class="table-state error-state">${escapeHtml(error.message)}</td></tr>`;
+    }
+}
+
+function readLocalStockIncreases() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(LOCAL_STOCK_KEY) || '[]');
+        if (Array.isArray(saved)) return saved;
+        if (!saved || typeof saved !== 'object') return [];
+        return Object.values(saved).map(item => ({
+            ...item,
+            added_at: item.added_at || null
+        }));
+    } catch (error) {
+        console.warn('Unable to read browser-only stock increases:', error);
+        return [];
+    }
+}
+
+function getDisplayedStock() {
+    const displayed = cachedStock.map(item => ({
+        ...item,
+        available_quantity: Number(item.available_quantity) || 0
+    }));
+    const stockByKey = new Map(displayed.map(item => [`${item.fruit_id}:${String(item.packaging_size).toUpperCase()}`, item]));
+
+    for (const adjustment of readLocalStockIncreases()) {
+        const quantity = Number(adjustment?.quantity);
+        const fruitId = Number(adjustment?.fruit_id);
+        const packagingSize = String(adjustment?.packaging_size || '').toUpperCase();
+        if (!Number.isSafeInteger(quantity) || quantity <= 0 || !Number.isSafeInteger(fruitId) || !['SMALL', 'MEDIUM', 'LARGE'].includes(packagingSize)) continue;
+        const key = `${fruitId}:${packagingSize}`;
+        let item = stockByKey.get(key);
+        if (!item) {
+            item = {
+                fruit_id: Number(adjustment.fruit_id),
+                fruit_name: adjustment.fruit_name || 'Unknown fruit',
+                packaging_size: adjustment.packaging_size,
+                available_quantity: 0
+            };
+            displayed.push(item);
+            stockByKey.set(key, item);
+        }
+        item.available_quantity += quantity;
+    }
+    return displayed;
+}
+
+function renderStockOverview() {
+    const stock = getDisplayedStock();
+    const totalBoxes = stock.reduce((total, item) => total + (Number(item.available_quantity) || 0), 0);
+    const totalElement = document.getElementById('stat-stock');
+    if (totalElement) totalElement.innerText = totalBoxes;
+    renderStockChart(stock);
+    renderStockTable(stock);
+    renderStockAdditionHistory();
+}
+
+function renderStockTable(stock) {
+    const tbody = document.getElementById('stock-table-body');
+    if (!tbody) return;
     tbody.innerHTML = '';
-    const res = await fetch(`${API_URL}/fruits/stock`);
-    const stock = await res.json();
-    
-    // Group by fruit
     const grouped = {};
+    cachedFruits.forEach(fruit => {
+        grouped[fruit.fruit_name] = { SMALL: 0, MEDIUM: 0, LARGE: 0 };
+    });
     stock.forEach(item => {
         if(!grouped[item.fruit_name]) grouped[item.fruit_name] = { SMALL: 0, MEDIUM: 0, LARGE: 0 };
-        grouped[item.fruit_name][item.packaging_size] = item.available_quantity;
+        grouped[item.fruit_name][String(item.packaging_size).toUpperCase()] = Number(item.available_quantity) || 0;
     });
 
     for(const [fruit, sizes] of Object.entries(grouped)) {
@@ -397,6 +509,67 @@ async function renderInventoryTable() {
         `;
     }
 }
+
+function renderStockAdditionHistory() {
+    const tbody = document.getElementById('stock-additions-table-body');
+    if (!tbody) return;
+    const additions = readLocalStockIncreases().slice().reverse();
+    if (!additions.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="table-state">No stock additions recorded yet.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = additions.map(addition => {
+        const addedAt = addition.added_at ? new Date(addition.added_at) : null;
+        const dateLabel = addedAt && !Number.isNaN(addedAt.getTime())
+            ? addedAt.toLocaleString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : 'Earlier addition';
+        return `<tr><td>${escapeHtml(dateLabel)}</td><td>${escapeHtml(addition.fruit_name || 'Fruit')}</td><td>${escapeHtml(String(addition.packaging_size || '').toLowerCase())}</td><td>${Number(addition.quantity) || 0}</td></tr>`;
+    }).join('');
+}
+
+function openStockModal() {
+    const overlay = document.getElementById('stock-modal-overlay');
+    document.getElementById('stock-increase-message').textContent = '';
+    document.getElementById('stock-increase-message').className = 'form-message';
+    overlay.classList.add('active');
+    document.getElementById('stock-increase-fruit').focus();
+}
+
+function closeStockModal() {
+    document.getElementById('stock-modal-overlay').classList.remove('active');
+}
+
+document.getElementById('stock-increase-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const fruitId = Number(document.getElementById('stock-increase-fruit').value);
+    const packagingSize = document.getElementById('stock-increase-size').value;
+    const quantity = Number(document.getElementById('stock-increase-quantity').value);
+    const fruit = cachedFruits.find(item => Number(item.fruit_id) === fruitId);
+    const message = document.getElementById('stock-increase-message');
+    if (!fruit || !['SMALL', 'MEDIUM', 'LARGE'].includes(packagingSize) || !Number.isSafeInteger(quantity) || quantity <= 0) {
+        message.textContent = 'Select a fruit and packaging size, then enter a whole number greater than zero.';
+        message.className = 'form-message error-state';
+        return;
+    }
+
+    try {
+        const increases = readLocalStockIncreases();
+        increases.push({
+            fruit_id: fruitId,
+            fruit_name: fruit.fruit_name,
+            packaging_size: packagingSize,
+            quantity,
+            added_at: new Date().toISOString()
+        });
+        localStorage.setItem(LOCAL_STOCK_KEY, JSON.stringify(increases));
+        event.currentTarget.reset();
+        renderStockOverview();
+        closeStockModal();
+    } catch (error) {
+        message.textContent = error.message || 'This browser could not save the stock adjustment.';
+        message.className = 'form-message error-state';
+    }
+});
 
 function renderStockChart(stock) {
     const ctx = document.getElementById('stockChart').getContext('2d');
@@ -555,7 +728,7 @@ document.getElementById('sale-form').addEventListener('submit', async (e) => {
     const payload = {
         vendor_id: document.getElementById('vendor_id').value,
         payment_method: 'CASH',
-        amount_paid: 0, 
+        amount_paid: 0,
         items: [{
             fruit_id: document.getElementById('fruit_id').value,
             quantity: parseInt(document.getElementById('quantity').value),

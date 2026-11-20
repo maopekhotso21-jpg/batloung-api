@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batloung Farm | Pro Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=3">
+    <link rel="stylesheet" href="css/style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -99,6 +99,7 @@
                         <h1>Inventory & Stock</h1>
                         <p>Live stock levels across all packaging sizes</p>
                     </div>
+                    <button type="button" class="stock-add-button" aria-label="Add stock" title="Add stock" onclick="openStockModal()">+</button>
                 </header>
                 <div class="glass-card table-container">
                     <table>
@@ -113,6 +114,20 @@
                         <tbody id="stock-table-body"></tbody>
                     </table>
                 </div>
+                <section class="stock-additions-section">
+                    <div class="section-heading">
+                        <div>
+                            <h2>Stock additions</h2>
+                            <p>Recent fruit stock increases recorded in this browser.</p>
+                        </div>
+                    </div>
+                    <div class="glass-card table-container">
+                        <table class="purchase-table">
+                            <thead><tr><th>Date added</th><th>Fruit</th><th>Packaging size</th><th>Boxes added</th></tr></thead>
+                            <tbody id="stock-additions-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
 
             <!-- Vendors Management -->
@@ -272,6 +287,7 @@
                                     <th>Supplier</th>
                                     <th>Boxes</th>
                                     <th>Total</th>
+                                    <th>Payment status</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -299,6 +315,35 @@
         </div>
     </div>
 
-    <script src="js/app.js?v=3"></script>
+    <div id="stock-modal-overlay" class="modal-overlay" onclick="if(event.target === this) closeStockModal()">
+        <section class="modal glass-card stock-modal" role="dialog" aria-modal="true" aria-labelledby="stock-modal-title">
+            <div class="modal-header">
+                <h2 id="stock-modal-title">Add stock</h2>
+                <button type="button" class="close-btn" aria-label="Close" onclick="closeStockModal()">&times;</button>
+            </div>
+            <form id="stock-increase-form" class="stock-increase-form">
+                <div class="form-group">
+                    <label for="stock-increase-fruit">Fruit</label>
+                    <select id="stock-increase-fruit" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="stock-increase-size">Packaging size</label>
+                    <select id="stock-increase-size" required>
+                        <option value="SMALL">Small</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LARGE">Large</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="stock-increase-quantity">Boxes to add</label>
+                    <input id="stock-increase-quantity" type="number" min="1" step="1" required>
+                </div>
+                <p id="stock-increase-message" class="form-message" aria-live="polite"></p>
+                <button type="submit" class="btn-primary btn-large">Add stock</button>
+            </form>
+        </section>
+    </div>
+
+    <script src="js/app.js?v=6"></script>
 </body>
 </html>
